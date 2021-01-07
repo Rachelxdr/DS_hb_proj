@@ -63,6 +63,11 @@ string Node::pack_membership_list() {
     return msg;
 }
 
+void Node::update_self_info() {
+    tuple <int, int, int> new_info = make_tuple(this->hb, this->local_clock, this->status);
+    this->membership_list[this->id] = new_info;
+}
+
 void Node::membership_list_init() {
     tuple <int, int, int> info = make_tuple(this->hb, this->local_clock, this->status);
     this->membership_list.insert(pair<string, tuple<int, int, int>>(this->id, info));
@@ -92,8 +97,16 @@ void Node::send_hb() {
 
 void Node::merge_membership_list(string msg) {
     // ip_addr::port::join_time==hb#flag||ip_addr::port...
+    cout << "[DEBUG] membership message before split string: "<< msg << endl;
     vector<string> members = splitStirng(msg, "||");
+    cout << "[DEBUG] =================== member vector ====================== " << endl;
+    int ct = 0;
+    for (string cur_mem : members) {
+        cout << "At position: " << ct << " " << cur_mem << endl;
+        ct++;
+    }
     for (int i = 0; i < members.size(); i++) {
+        cout << "[DEBUG MEMBER] Received member info: " << members[i] <<endl;
         vector<string> parse_mem = splitStirng(members[i], "==");
             if (parse_mem.size() != 2) {
                 cout << "[ERROR] HEARTBEAT format invalid" <<endl;
@@ -131,11 +144,14 @@ void Node::merge_membership_list(string msg) {
                // TODO: other cases
                 map<string, tuple<int, int, int>>::iterator it;
                 it = this->membership_list.find(mem_id);
-                if (it == this->membership_list.end()) { // New member
-                    tuple <int, int, int> mem_to_list = make_tuple(mem_hb, this->local_clock, mem_flag);
-                    this->membership_list.insert(pair<string, tuple<int, int, int>>(mem_id, mem_to_list));
-                    string log_msg = "[NEW MEMBER] " + mem_id;
-                    this->node_logger->log(log_msg);
+                if (it == this->membership_list.end()) {
+                    if (mem_flag != FAILED) { // New member
+                        tuple <int, int, int> mem_to_list = make_tuple(mem_hb, this->local_clock, mem_flag);
+                        this->membership_list.insert(pair<string, tuple<int, int, int>>(mem_id, mem_to_list));
+                        string log_msg = "[NEW MEMBER] " + mem_id;
+                        cout << log_msg << endl;
+                        this->node_logger->log(log_msg);
+                    }
                 } else {
                     int hb_in_list = get<0>(this->membership_list[mem_id]);
                     int clock_in_list = get<1>(this->membership_list[mem_id]);
@@ -145,6 +161,7 @@ void Node::merge_membership_list(string msg) {
                         tuple<int, int, int> new_tuple = make_tuple(hb_in_list, this->local_clock, FAILED);
                         this->membership_list[mem_id] = new_tuple;
                         string log_msg = "[FAILURE INFO] " + mem_id;
+                        cout << log_msg << endl;
                         this->node_logger->log(log_msg);
                     } else{
                         if (hb_in_list < mem_hb) { // Higher hb value
@@ -178,10 +195,10 @@ void Node::failure_detection() {
             if (mem_flag == FAILED && this->local_clock - mem_clock > T_cleanup) {
                 remove_members.push_back(mem_id);
             } else {
-                if (this->local_clock - mem_clock > T_fail) {
+                if (mem_flag != FAILED && this->local_clock - mem_clock > T_fail) {
                     tuple<int, int, int> new_tuple = make_tuple(mem_hb, mem_clock, FAILED);
                     this->membership_list[mem_id] = new_tuple;
-                    string log_msg = "[FAILURE DETECTION] " + mem_id;
+                    string log_msg = "[FAILURE DETECTION] " + mem_id + "current clock: " + to_string(this->local_clock) + " member clock: " + to_string(mem_clock) + "member hb: " + to_string(mem_hb);
                     this->node_logger->log(log_msg);
                     cout << log_msg << endl;
                 }
@@ -214,16 +231,20 @@ void Node::read_message(){
     while (!messages_to_process.empty()) {
         
         msg = messages_to_process.front();
-        cout << "[DEBUG CLIENT]: msg: " << msg << endl; 
+        cout << "[DEBUG] Node msg from queue msg: " << msg << endl; 
         // Parse message type
         vector<string> str_v = splitStirng(msg, ">>>");
         // for (int i = 0; i < str_v.size(); i++) {
         //     cout<< "[DEBUG CLIENT] str_v at " << i << " : " << str_v[i] <<endl;
         //     fflush(stdout);
         // }
-        string type = str_v[0];
-        string content = str_v[1];
-        process_received_message(type, content);
+        if (str_v.size() == 2) {
+            string type = str_v[0];
+            string content = str_v[1];
+            process_received_message(type, content);
+        } else {
+            cout << "[ERROR] Invalid queued message format "<<endl;
+        }
         messages_to_process.pop();
     }
     // sleep(10);

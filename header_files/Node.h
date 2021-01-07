@@ -27,7 +27,7 @@
 #define T_period 5
 
 
-// using namespace std;
+using namespace std;
 
 string get_ip();
 string create_id();
@@ -58,6 +58,7 @@ class Node {
         void read_message();
         void failure_detection();
         void send_hb();
+        void update_self_info();
 
     private:
         void membership_list_init();

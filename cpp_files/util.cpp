@@ -55,6 +55,7 @@ vector<string> splitStirng(string s, string delim) {
         prev = (int)pos + delim_size;
         result.push_back(buf);
         sub = sub.substr(prev);
+        prev = 0;
         // cout << "[DEBUG SPLIT_STRING] pos: " << pos <<endl;
     }
     // cout << "[DEBUG SPLIT_STRING] result size: "<< result.size()<<endl;

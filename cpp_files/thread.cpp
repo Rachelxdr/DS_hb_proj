@@ -32,6 +32,7 @@ void* client_start(void* arg) {
         cur_node->failure_detection();
         cur_node->hb++;
         cur_node->local_clock++;
+        cur_node->update_self_info();
         cur_node->send_hb();
         sleep(T_period);
 

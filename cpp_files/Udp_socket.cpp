@@ -13,7 +13,7 @@ int Udp_socket::send_message(string msg, string ip_addr, MessageType type) {
     memset(&hints, 0, sizeof(struct addrinfo));
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_DGRAM;
-    cout << "[DEBUG CLIENT SEND] target ip: " << ip_addr << endl;
+    // cout << "[DEBUG CLIENT SEND] target ip: " << ip_addr << endl;
     s = getaddrinfo(ip_addr.c_str(), PORT, &hints, &result);
     if (s) {
         fprintf(stderr, "[ERROR] getaddrinfo client: %s\n", gai_strerror(s));
@@ -59,7 +59,7 @@ int Udp_socket::send_message(string msg, string ip_addr, MessageType type) {
             cout << "[ERROR] Invalid message type" <<endl;
             return 1;
     }
-    cout << "[DEBUG] Client socket created" <<endl;
+    // cout << "[DEBUG] Client socket created" <<endl;
     ssize_t bytes_sent;
     bytes_sent = sendto(sock_fd, msg.c_str(), strlen(msg.c_str()), 0, util->ai_addr, util->ai_addrlen);
     if(bytes_sent < 0) {
@@ -67,7 +67,8 @@ int Udp_socket::send_message(string msg, string ip_addr, MessageType type) {
         return 1;
     }
     
-    cout << "[DEBUG] bytes_sent" << bytes_sent <<endl;
+    cout << "[DEBUG] Client message sent: " << msg <<" Target: " << ip_addr <<endl;
+    
     freeaddrinfo(result);
     close(sock_fd);
     return 0;
@@ -121,7 +122,7 @@ int Udp_socket::create_server_socket() {
         return 1;
     }
 
-    cout <<"[DEBUG] Server socket created" <<endl;
+    // cout <<"[DEBUG] Server socket created" <<endl;
     char buf[MAX_MSG_SIZE];
     ssize_t bytes_received;
     struct sockaddr_storage addr;
@@ -131,6 +132,7 @@ int Udp_socket::create_server_socket() {
         // cout << "[DEBUG] loop" <<endl;
         char buf[MAX_MSG_SIZE];
         ssize_t bytes_received;
+        // While loop with recv??
         bytes_received = recvfrom(sock_fd, buf, sizeof(buf), 0, (struct sockaddr*)&addr, (socklen_t*)&addrlen);
         if (bytes_received == -1) {
             cout << "[ERROR] Server receives message" <<endl;
@@ -138,17 +140,17 @@ int Udp_socket::create_server_socket() {
         }
         
         buf[bytes_received] = '\0';
-        printf("[DEBUG] buf: %s\n", buf);
+        printf("[DEBUG] server message received: %s\n", buf);
         fflush(stdout);
         pthread_mutex_lock(&queue_lock);
-        cout << "[DEBUG] mem addr of queue server: " << &messages_received <<endl;
+        // cout << "[DEBUG] mem addr of queue server: " << &messages_received <<endl;
         
         this->messages_received.push(buf);
-        cout << "[DEBUG] messages_received size in server: " << messages_received.size() <<endl;
+        // cout << "[DEBUG] messages_received size in server: " << messages_received.size() <<endl;
         pthread_mutex_unlock(&queue_lock);
         bzero(buf, sizeof(buf));
     }
-    cout << "[DEBUG] bytes_received: "<< bytes_received <<endl;
+    // cout << "[DEBUG] bytes_received: "<< bytes_received <<endl;
     
     
     fflush(stdout);

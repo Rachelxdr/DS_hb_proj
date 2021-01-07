@@ -6,10 +6,7 @@ int main(int argc, char* argv[]) {
         cout << "[USAGE] ./node.cpp <HEARTBEAT_MODE> (0 = a2a / 1 = gossip) [OPTIONAL] -i"<<endl;
         exit(1);
     }
-    if (argc == 3 && (string(argv[2]).compare("-i")) != 0) {
-        cout << "[USAGE] ./node.cpp <HEARTBEAT_MODE> (0 = a2a / 1 = gossip) [OPTIONAL] -i"<<endl;
-        exit(1);
-    }
+   
 
 
     if (stoi(argv[1]) == 0) {
@@ -17,20 +14,16 @@ int main(int argc, char* argv[]) {
     } else if (stoi(argv[1]) == 1) {
         cout << "[MODE] GOSSIP" << endl;
     } else {
-        cout << "[ERROR] INVALID MODE --- 0 = ALL2ALL  1 = GOSSIP" <<endl;
+        cout << "[ERROR CMD ARG] INVALID MODE --- 0 = ALL2ALL  1 = GOSSIP" <<endl;
         exit(1);
     }
     int hb_mode = stoi(argv[1]);
 
     Node* node = new Node(hb_mode);
-    if (argc == 3) {
-        node->node_logger->log("[START_NODE] " + node->id + " as the introducer");
-        cout << "[START_NODE]" + node->id << " as the introducer"<< endl;
-        node->is_introducer = 1;
-    } else{
-        node->node_logger->log("[START_NODE] " + node->id);
-        cout << "[START_NODE]" + node->id<< endl;
-    }
+    
+    node->node_logger->log("[START_NODE] " + node->id);
+     cout << "[START_NODE]" + node->id<< endl;
+    
 
     pthread_t server_thread;
     int server_thread_create = pthread_create(&server_thread, NULL, server_start, (void*) node);
