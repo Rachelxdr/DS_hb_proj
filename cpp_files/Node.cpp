@@ -40,7 +40,43 @@ void Node::process_received_message(string type, string content) {
         merge_membership_list(content);
     } else if (type == "HEARTBEAT") {
         merge_membership_list(content);
+    } else if (type == "SWITCH") {
+        switch_mode(content);
     }
+}
+
+void Node::print_membership_list() {
+    cout << "========================================= MEMBERSHIP LIST INFO =========================================" << endl;
+    cout << "               Member ID                 Heartbeat Counter             Clock                Status      " << endl;
+        //    172.17.0.2::9000::140565190499201              44                      1                  active
+    map <string, tuple<int, int, int>> :: iterator it;
+    for (it = this->membership_list.begin(); it != this->membership_list.end(); it++) {
+            string mem_id = it->first;
+            tuple<int, int, int> mem_info = it->second;
+            string mem_hb = to_string(get<0>(mem_info));
+            string mem_clock = to_string(get<1>(mem_info));
+            int flag = get<1>(mem_info);
+            string status; 
+            if (flag == FAILED) {
+                status = "Inactive";
+            } else {
+                status = "Active";
+            }
+            cout << "  " << mem_id << "  " << "           " << mem_hb << "                       " << mem_clock << "                   " << status << "         "<<endl;
+
+    }
+    cout << "========================================================================================================" << endl;
+}
+
+void Node::print_members_in_system() {
+    cout << "=============== Current Members ================"<<endl;
+    int ct = 1;
+    map <string, tuple<int, int, int>> :: iterator it;
+    for (it = this->membership_list.begin(); it != this->membership_list.end(); it++) {
+        cout << "[" << ct << "] " << it->first << endl;
+        ct++;
+    }
+    cout << "================================================="<<endl;
 }
 
 string Node::pack_membership_list() {
@@ -82,6 +118,35 @@ void Node::send_to_introducer(string msg) {
 
 void Node::send_hb() {
     string msg_to_send = pack_membership_list();
+    // map<string, tuple<int, int, int>>::iterator it;
+    // vector <string> all_targets;
+    // for (it = this->membership_list.begin(); it != this->membership_list.end(); it++) {
+    //     if (it->first != this->id && get<2>(it->second) != FAILED) {
+    //         vector<string> parse_id = splitStirng(it->first,  "::");
+    //         if (parse_id.size() != 3) {
+    //             cout << "[ERROR] Incorrect ip format in membership list" << endl;
+    //         }
+    //         string target_ip = parse_id[0];
+            
+    //     }
+    // }
+    vector <string> targets_to_send = this->get_targets();
+    // if (this->mode == 1 && all_targets.size() > GOSSIP_SIZE) {
+    //     for (int k = 0; k < GOSSIP_SIZE; k++) {
+    //         int rand_num = rand() % all_targets.size();
+    //         targets_to_send.push_back(all_targets[rand_num]);
+    //         all_targets.erase(all_targets.begin() + rand_num);
+    //     }
+    // } else {
+    //     targets_to_send = all_targets;
+    // }
+    for (int i = 0; i < targets_to_send.size(); i++) {
+        this->udp_util->send_message(msg_to_send, targets_to_send[i], HEARTBEAT);
+    }
+}
+
+vector<string> Node::get_targets() {
+    vector <string> all_targets;
     map<string, tuple<int, int, int>>::iterator it;
     for (it = this->membership_list.begin(); it != this->membership_list.end(); it++) {
         if (it->first != this->id && get<2>(it->second) != FAILED) {
@@ -90,9 +155,60 @@ void Node::send_hb() {
                 cout << "[ERROR] Incorrect ip format in membership list" << endl;
             }
             string target_ip = parse_id[0];
-            this->udp_util->send_message(msg_to_send, target_ip, HEARTBEAT);
+            all_targets.push_back(target_ip);
         }
     }
+    vector <string> targets_to_send;
+    if (this->mode == 1 && all_targets.size() > GOSSIP_SIZE) {
+        for (int k = 0; k < GOSSIP_SIZE; k++) {
+            int rand_num = rand() % all_targets.size();
+            targets_to_send.push_back(all_targets[rand_num]);
+            cout << "[INFO] Gossip target: " << all_targets[rand_num] << endl;;
+            all_targets.erase(all_targets.begin() + rand_num);
+        }
+    } else {
+        targets_to_send = all_targets;
+    }
+    return targets_to_send;
+}
+
+void Node::send_switch_request() {
+    string target_mode;
+    if (this->mode == 0) {
+        target_mode = "Gossip";
+    } else {
+        target_mode = "All2All";
+    }
+    map<string, tuple<int, int, int>>::iterator it;
+    for (it = this->membership_list.begin(); it != this->membership_list.end(); it++) {
+        if (get<2>(it->second) != FAILED) {
+            vector<string> parse_id = splitStirng(it->first,  "::");
+            if (parse_id.size() != 3) {
+                cout << "[ERROR] Incorrect ip format in membership list" << endl;
+            }
+            string target_ip = parse_id[0];
+            this->udp_util->send_message(target_mode, target_ip, SWITCH);
+        }
+    }
+}
+
+void Node::switch_mode(string target_mode) {
+    if (target_mode == "Gossip" && this->mode == 0) {
+        this->mode = 1;
+        string msg = "[SWITCH] Switched mode to GOSSIP";
+        this->node_logger->log(msg);
+        cout << msg << endl;
+        return;
+    }
+
+    if (target_mode == "All2All" && this->mode == 1) {
+        this->mode = 0;
+        string msg = "[SWITCH] Switched mode to All2All";
+        this->node_logger->log(msg);
+        cout << msg << endl;
+        return;
+    }
+    
 }
 
 void Node::merge_membership_list(string msg) {

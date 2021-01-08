@@ -55,6 +55,9 @@ int Udp_socket::send_message(string msg, string ip_addr, MessageType type) {
         case HEARTBEAT:
             msg = "HEARTBEAT>>>" + msg;
             break;
+        case SWITCH:
+            msg = "SWITCH>>>" + msg;
+            break;
         default:
             cout << "[ERROR] Invalid message type" <<endl;
             return 1;

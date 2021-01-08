@@ -39,13 +39,27 @@ int main(int argc, char* argv[]) {
         if (cmd == "join") {
             node->join_group();
         } else if (cmd == "leave") {
-            cout << "leave group" << endl;
+            /* 
+                1. change node status
+                2. log message
+                3. pthread_join
+            */
+            node->status = FAILED;
+            string msg = "[LEAVE] " + node->id;
+            node->node_logger->log(msg);
+            cout << msg << endl;
+            // pthread_join()
+
+            // cout << "leave group" << endl;
         } else if (cmd == "list") {
-            cout << "membership list" << endl;
+            node->print_membership_list();
         } else if (cmd == "id") {
-            cout << "self id" << endl;
+            cout << "========= Current Node ID ========" << endl;
+            cout << node->id <<endl;
+            cout << "==================================" << endl;
         } else if (cmd == "switch") {
-            cout << "switch hb style" << endl;
+            node->send_switch_request();
+
         } else {
             cout << "[ERROR] Invalid command"<< endl;
         }

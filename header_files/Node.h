@@ -25,6 +25,7 @@
 #define T_fail 3
 #define T_cleanup 3
 #define T_period 5
+#define GOSSIP_SIZE 4
 
 
 using namespace std;
@@ -59,12 +60,19 @@ class Node {
         void failure_detection();
         void send_hb();
         void update_self_info();
+        void print_members_in_system();
+        void print_membership_list();
+        void send_switch_request();
+        
 
     private:
         void membership_list_init();
         void process_received_message(string type, string content);
         void merge_membership_list(string msg);
         void process_mem(string mem_id, string mem_info);
+        vector<string> get_targets();
+        void switch_mode(string target_mode);
+        
 
 
 };

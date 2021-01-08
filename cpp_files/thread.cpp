@@ -25,15 +25,18 @@ void* client_start(void* arg) {
 
     while (cur_node->status == ACTIVE) {
         cur_node->read_message();
+        //TODO: handle switch mode case
 
         if (cur_node->status ==FAILED) {
-            break;
+            pthread_exit(NULL);
+            // break;
         }
         cur_node->failure_detection();
         cur_node->hb++;
         cur_node->local_clock++;
         cur_node->update_self_info();
         cur_node->send_hb();
+        cur_node->print_members_in_system();
         sleep(T_period);
 
         
